@@ -154,10 +154,15 @@ class AbAv1Gui(TkinterDnD.Tk):
 
         self.log_text = tk.Text(log_frame, wrap="word", state="disabled", relief="flat")
         self.log_text.grid(row=0, column=0, sticky="nsew")
+        self.log_text.bind("<Button-3>", self.show_log_context_menu)
         
         log_scroll_y = ttk.Scrollbar(log_frame, command=self.log_text.yview, style="TScrollbar")
         log_scroll_y.grid(row=0, column=1, sticky="ns")
         self.log_text.config(yscrollcommand=log_scroll_y.set)
+
+        # --- Context Menus ---
+        self.log_context_menu = tk.Menu(self, tearoff=0)
+        self.log_context_menu.add_command(label="Clear Log", command=self.clear_log)
 
 
     def add_files(self):
@@ -191,6 +196,9 @@ class AbAv1Gui(TkinterDnD.Tk):
         return event.action
 
     def drop(self, event):
+        if self.process:  # If a process is running, do nothing
+            return
+            
         print(f"Drop: {event.widget} {event.data}")
         if event.data:
             # Use self.tk.splitlist to correctly parse the Tcl list of file paths
@@ -223,7 +231,7 @@ class AbAv1Gui(TkinterDnD.Tk):
             values = [str(i) for i in range(19)]
             self.preset_combobox.config(values=values)
             if self.preset_var.get() not in values:
-                self.preset_var.set("8")
+                self.preset_var.set("15")
         elif encoder in ["libx264", "libx265"]:
             values = ["ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow", "placebo"]
             self.preset_combobox.config(values=values)
@@ -288,6 +296,8 @@ class AbAv1Gui(TkinterDnD.Tk):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
+                encoding='utf-8',
+                errors='replace',
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
 
@@ -354,6 +364,17 @@ class AbAv1Gui(TkinterDnD.Tk):
         self.log_text.config(state="normal")
         self.log_text.insert("end", message)
         self.log_text.see("end")
+        self.log_text.config(state="disabled")
+
+    def show_log_context_menu(self, event):
+        try:
+            self.log_context_menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            self.log_context_menu.grab_release()
+
+    def clear_log(self):
+        self.log_text.config(state="normal")
+        self.log_text.delete(1.0, "end")
         self.log_text.config(state="disabled")
 
 
