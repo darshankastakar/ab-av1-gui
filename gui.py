@@ -7,6 +7,7 @@ import darkdetect
 from tkinterdnd2 import DND_FILES, TkinterDnD
 import os
 import sys
+import json
 
 class AbAv1Gui(TkinterDnD.Tk):
     def __init__(self):
@@ -25,6 +26,49 @@ class AbAv1Gui(TkinterDnD.Tk):
         sv_ttk.set_theme(darkdetect.theme())
 
         self.create_widgets()
+        self.load_options()
+        self.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+    def on_closing(self):
+        self.save_options()
+        self.destroy()
+
+    def save_options(self):
+        options = {
+            "encoder": self.encoder_var.get(),
+            "preset": self.preset_var.get(),
+            "min_vmaf": self.min_vmaf_var.get(),
+            "scale_enabled": self.scale_enabled_var.get(),
+            "scale_width": self.scale_width_var.get(),
+            "scale_height": self.scale_height_var.get(),
+        }
+        try:
+            with open("gui.json", "w") as f:
+                json.dump(options, f, indent=4)
+        except Exception as e:
+            print(f"Error saving options: {e}")
+
+    def load_options(self):
+        try:
+            with open("gui.json", "r") as f:
+                options = json.load(f)
+            
+            self.encoder_var.set(options.get("encoder", "libsvtav1"))
+            # This will trigger the update of preset options
+            self.update_preset_options() 
+            self.preset_var.set(options.get("preset", "8"))
+            self.min_vmaf_var.set(options.get("min_vmaf", 95.0))
+            self.scale_enabled_var.set(options.get("scale_enabled", False))
+            self.scale_width_var.set(options.get("scale_width", ""))
+            self.scale_height_var.set(options.get("scale_height", ""))
+
+            self.toggle_scale_widgets()
+
+        except FileNotFoundError:
+            # Config file doesn't exist yet, do nothing
+            pass
+        except Exception as e:
+            print(f"Error loading options: {e}")
 
     def check_ab_av1_executable(self):
         # Check in current directory
